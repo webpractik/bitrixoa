@@ -18,7 +18,7 @@ composer install webpractik/bitrixoa
 
 Если Ваш роутер не настроен, то прочтите [Настройка роутера Bitrix](.docs/bxrouter.md):
 1. Добавьте в роутер
-```angular2html
+```php
 use Bitrix\Main\Routing\RoutingConfigurator;
 
 return function (RoutingConfigurator $configurator) {
@@ -32,7 +32,7 @@ return function (RoutingConfigurator $configurator) {
 ### B. Через Bitrix Controller без роутера
 1. Создайте в своем модуле файл `.settings.php`
 2. Задайте корректный namespace и конфигурации для своего модуля
-3. Скопируйте содержимое класса BitrixUiNativeContoller из этого пакета к себе в модуль, в свой класс-контроллер
+3. Скопируйте содержимое класса BitrixUiNativeController из этого пакета к себе в модуль, в свой класс-контроллер
 4. Обращайтесь по адресу `<адрес сайта>/bitrix/services/main/ajax.php?action=<ваши настройки>` 
 
 ### С. Статический UI
