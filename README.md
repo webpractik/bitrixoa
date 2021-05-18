@@ -1,29 +1,23 @@
-# bitrixoa
-Пакет для генерации аннотаций и отрисовки SwUi, при работе с контроллерами Bitrix.
-Поставляется сразу с написанным контроллером.
+# [bitrixoa] Bitrix OpenApi
+Пакет для генерации [Swagger UI](https://swagger.io/tools/swagger-ui/) на основе аннотаций при работе с [контроллерами](https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&LESSON_ID=6436&LESSON_PATH=3913.3516.5062.3750.6436) и роутером Bitrix.
 
 ## Установка
 ```angular2html
 composer install webpractik/bitrixoa
 ```
 
-## Команды для работы
-
+## Генерация
 ```./vendor/bin/bitrixoa```
 
-### Опции
-1. ``` --bitrix-generate```
- Опция указывает, что openapi необходимо смотреть в директорию local/modules
-2. ```--index-mode``` Создаст сгенерированный index.php с разметкой swaggerui по адресу api-doc физически, в корне сайта.
+### Параметры
+1. ```--bitrix-generate``` параметр указывает, что openapi необходимо смотреть в директорию local/modules
+2. ```--index-mode``` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
 
+## Режимы работы
+### A. Через нативный bitrix router (v20+)
 
-
-
-## Работа с роутером битрикс
-
-### В режиме работы с роутером 
 Если Ваш роутер не настроен, то прочтите [Настройка роутера Bitrix](.docs/bxrouter.md):
-1. У себя в модуле создайте файл routes.php с содержимым 
+1. Добавьте в роутер
 ```angular2html
 use Bitrix\Main\Routing\RoutingConfigurator;
 
@@ -35,10 +29,15 @@ return function (RoutingConfigurator $configurator) {
 ```
 2. В таком случае документация откроется по адресу /swagger/apidoc
 
-### В режиме работы с нативными контроллерами Bitrix без роутера
+### B. Через Bitrix Controller без роутера
 1. Создайте в своем модуле файл .settings.php
 2. Задайте корректный namespace и конфигурации для своего модуля
 3. Скопируйте содержимое класса BitrixUiNativeContoller из этого пакета к себе в модуль, в свой класс-контроллер
 4. Обращайтесь по адресу ```<адрес сайта>/bitrix/services/main/ajax.php?action=<ваши настройки>``` 
 
+### С. Статический UI
+Запустить генерацию с флагом ```--index-mode``` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
 
+## Roadmap
+1. Сделать генерацию путей на основе анализа роутера
+2. Покрыть тестами
