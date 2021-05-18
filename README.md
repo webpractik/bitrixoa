@@ -22,9 +22,7 @@ composer install webpractik/bitrixoa
 use Bitrix\Main\Routing\RoutingConfigurator;
 
 return function (RoutingConfigurator $configurator) {
-    $configurator->prefix('swagger')->group(function (RoutingConfigurator $configurator) {
-        $configurator->get('apidoc', [\BitrixOA\BitrixUiController::class, 'apidocAction']);
-    });
+        $configurator->get('api-doc', [\BitrixOA\BitrixUiController::class, 'apidocAction']);
 };
 ```
 2. В таком случае документация откроется по адресу `/swagger/apidoc`
