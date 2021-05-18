@@ -16,7 +16,7 @@ composer install webpractik/bitrixoa
 ## Режимы работы
 ### A. Через нативный bitrix router (v20+)
 
-Если Ваш роутер не настроен, то прочтите [Настройка роутера Bitrix](.docs/bxrouter.md):
+Если Ваш роутер не настроен, то прочтите [Настройка роутера Bitrix](docs/bxrouter.md):
 1. Добавьте в роутер
 ```php
 use Bitrix\Main\Routing\RoutingConfigurator;
@@ -25,7 +25,7 @@ return function (RoutingConfigurator $configurator) {
         $configurator->get('api-doc', [\BitrixOA\BitrixUiController::class, 'apidocAction']);
 };
 ```
-2. В таком случае документация откроется по адресу `/swagger/apidoc`
+2. В таком случае документация откроется по адресу `/api-doc`
 
 ### B. Через Bitrix Controller без роутера
 1. Создайте в своем модуле файл `.settings.php`
