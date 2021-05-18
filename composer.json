@@ -1,0 +1,28 @@
+{
+  "name": "webpractik/bitrixoa",
+  "description": "A package for generating annotations and drawing SwUi when working with Bitrix controllers.",
+  "keywords": ["bitrix", "swagger", "scheme"],
+  "bin": [
+    "bin/bitrixoa"
+  ],
+  "homepage": "https://github.com/webpractik/bitrixoa",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Петр Кленкин (mnlght)",
+      "email": "pk@webpractik.ru"
+    }
+  ],
+  "config": {
+    "bin-dir": "bin",
+    "sort-packages": true
+  },
+  "autoload": {
+    "psr-4": {
+      "BitrixOA\\": "src"
+    }
+  },
+  "require": {
+    "zircote/swagger-php": "^3.1"
+  }
+}
