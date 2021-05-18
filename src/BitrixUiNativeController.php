@@ -22,7 +22,7 @@ class BitrixUiNativeController extends Controller
         ];
     }
     
-    public function swaggerdocAction()
+    public function apidocAction()
     {
         if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/local/bitrixoa.yaml')) {
             throw new Exception('Файл с разметкой не существует');
