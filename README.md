@@ -10,8 +10,8 @@ composer install webpractik/bitrixoa
 ```./vendor/bin/bitrixoa```
 
 ### Параметры
-1. ```--bitrix-generate``` параметр указывает, что openapi необходимо смотреть в директорию local/modules
-2. ```--index-mode``` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
+1. `--bitrix-generate` параметр указывает, что openapi необходимо смотреть в директорию local/modules
+2. `--index-mode` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
 
 ## Режимы работы
 ### A. Через нативный bitrix router (v20+)
@@ -27,17 +27,17 @@ return function (RoutingConfigurator $configurator) {
     });
 };
 ```
-2. В таком случае документация откроется по адресу /swagger/apidoc
+2. В таком случае документация откроется по адресу `/swagger/apidoc`
 
 ### B. Через Bitrix Controller без роутера
-1. Создайте в своем модуле файл .settings.php
+1. Создайте в своем модуле файл `.settings.php`
 2. Задайте корректный namespace и конфигурации для своего модуля
 3. Скопируйте содержимое класса BitrixUiNativeContoller из этого пакета к себе в модуль, в свой класс-контроллер
-4. Обращайтесь по адресу ```<адрес сайта>/bitrix/services/main/ajax.php?action=<ваши настройки>``` 
+4. Обращайтесь по адресу `<адрес сайта>/bitrix/services/main/ajax.php?action=<ваши настройки>` 
 
 ### С. Статический UI
-Запустить генерацию с флагом ```--index-mode``` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
+Запустить генерацию с флагом `--index-mode` создаст сгенерированный `/api-doc/index.php` с разметкой swaggerui физически.
 
 ## Roadmap
-1. Сделать генерацию путей на основе анализа роутера
-2. Покрыть тестами
+- [ ] Сделать генерацию путей на основе анализа роутера
+- [ ] Покрыть тестами
