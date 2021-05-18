@@ -252,8 +252,25 @@ $openapi = OpenApi\scan($paths, ['exclude' => $exclude, 'pattern' => $pattern]);
 if ($exit !== 0) {
     error_log('');
 }
-$options['output'] = 'local/bitrixoa.yaml';
-$openapi->saveAs($options['output'], $options['format']);
+if ($bitrixMarker) {
+    $options['output'] = 'local/bitrixoa.yaml';
+    $openapi->saveAs($options['output'], $options['format']);
+} else {
+    if ($options['output'] === false) {
+        if (strtolower($options['format']) === 'json') {
+            echo $openapi->toJson();
+        } else {
+            echo $openapi->toYaml();
+        }
+        echo "\n";
+    } else {
+        if (is_dir($options['output'])) {
+            $options['output'] .= '/bitrixoa.yaml';
+        }
+        $openapi->saveAs($options['output'], $options['format']);
+    }
+}
+
 
 if ($indexMarker) {
     (new \BitrixOA\UiService($options['output']))->exportWithIndexPage();
