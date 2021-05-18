@@ -24,7 +24,7 @@ class BitrixUiNativeController extends Controller
     
     public function swaggerdocAction()
     {
-        if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/vendor/webpractik/bitrixoa/src/bitrixoa.yaml')) {
+        if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/local/bitrixoa.yaml')) {
             throw new Exception('Файл с разметкой не существует');
         }
         $swaggerPage = (new UiPage(BitrixOaConfig::YAML_FILE_DEFAULT_PATH))->getHtml();
