@@ -1,7 +1,7 @@
 {
   "name": "webpractik/bitrixoa",
   "description": "A package for generating annotations and drawing SwUi when working with Bitrix controllers.",
-  "keywords": ["bitrix", "swagger", "scheme"],
+  "keywords": ["bitrix", "swagger", "bitrix controllers"],
   "bin": [
     "bin/bitrixoa"
   ],

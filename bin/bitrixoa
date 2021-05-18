@@ -252,24 +252,9 @@ $openapi = OpenApi\scan($paths, ['exclude' => $exclude, 'pattern' => $pattern]);
 if ($exit !== 0) {
     error_log('');
 }
-$options['output'] = 'vendor/webpractik/bitrixoa/openapi.yaml';
+$options['output'] = 'local/bitrixoa.yaml';
 $openapi->saveAs($options['output'], $options['format']);
-// if ($options['output'] === false) {
-//     // if (strtolower($options['format']) === 'json') {
-//     //     echo $openapi->toJson();
-//     // } else {
-//     //     echo $openapi->toYaml();
-//     // }
-//     // echo "\n";
-//     $options['output'] = 'vendor/zircote/swagger-php/bitrixoa.yaml';
-//     $openapi->saveAs($options['output'], $options['format']);
-// } else {
-//     // if (is_dir($options['output'])) {
-//     //     $options['output'] .= '/vendor/zircote/swagger-php/bitrixoa.yaml';
-//     // }
-//     $options['output'] = 'vendor/zircote/swagger-php/bitrixoa.yaml';
-//     $openapi->saveAs($options['output'], $options['format']);
-// }
+
 if ($indexMarker) {
     (new \BitrixOA\UiService($options['output']))->exportWithIndexPage();
 }
