@@ -12,6 +12,37 @@ composer install webpractik/bitrixoa
 ### Параметры
 1. `--bitrix-generate` параметр указывает, что openapi необходимо смотреть в директорию local/modules
 2. `--index-mode` создаст сгенерированный /api-doc/index.php с разметкой swaggerui физически.
+3. `--bootstrap` (`-b`) подключить php-файл до сканирования (нужно для swagger-php >=5, см. ниже).
+
+## Совместимость со swagger-php 5/6
+Пакет работает со swagger-php `^4.6`, `^5` и `^6`. Ключевые отличия:
+
+- **Способы описания.** Поддерживаются и PHP-атрибуты `#[OA\...]` (предпочтительно
+  в 5/6), и docblock-аннотации `@OA\...`. Для аннотаций нужен пакет
+  `doctrine/annotations` (в swagger-php он опционален начиная с 4.8) — он добавлен
+  в зависимости bitrixoa.
+- **Рефлексия и bootstrap.** В swagger-php >=5 удалён `TokenAnalyser`, остался
+  только `ReflectionAnalyser`: чтобы прочитать аннотации/атрибуты, он загружает
+  классы. Контроллеры Bitrix наследуют классы ядра, поэтому генерацию нужно
+  запускать при поднятом ядре — укажите bootstrap-скрипт, инициализирующий Bitrix:
+
+  ```bash
+  php vendor/bin/bitrixoa --bitrix-generate -b bootstrap.php
+  ```
+
+  Пример `bootstrap.php` (поднимает ядро и подключает модули):
+
+  ```php
+  <?php
+  $projectRoot = dirname(__DIR__);
+  $_SERVER['DOCUMENT_ROOT'] = $projectRoot . '/public';
+  require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/cli/bootstrap.php';
+  require_once $projectRoot . '/vendor/autoload.php';
+  \Bitrix\Main\Loader::includeModule('vendor.engine');
+  ```
+
+  Процедурные файлы без классов (`admin/*`, `include.php` и т.п.) рефлексия не
+  исполняет — `TokenScanner` заранее находит имена классов и пропускает файлы без них.
 
 ## Режимы работы
 ### A. Через нативный bitrix router (v20+)

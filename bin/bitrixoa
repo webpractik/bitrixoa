@@ -1,8 +1,11 @@
 #!/usr/bin/env php
 <?php
-use OpenApi\Logger;
+use OpenApi\Context;
 use OpenApi\Analysis;
-use const OpenApi\UNDEFINED;
+use OpenApi\Generator;
+use OpenApi\SourceFinder;
+use Psr\Log\LogLevel;
+use Psr\Log\AbstractLogger;
 use const OpenApi\COLOR_RED;
 use const OpenApi\COLOR_YELLOW;
 use const OpenApi\COLOR_STOP;
@@ -117,8 +120,10 @@ if ($options['help']) {
 Usage: openapi [--option value] [/path/to/project ...]
 
 Options:
-  --bitrix-generate При указании автоматически ищет аннотации в папке
-                    /local/modules, игнорируя outdir
+  --bitrix-generate Сканирует аннотации @OA и атрибуты #[OA\\...] в папке
+                    /local/modules, результат пишет в local/bitrixoa.yaml.
+                    Для swagger-php >=5 требуется поднятое ядро: укажите его
+                    через --bootstrap (см. README).
   --output (-o)     Path to store the generated documentation.
                     ex: --output openapi.yaml
   --exclude (-e)    Exclude path(s).
@@ -138,11 +143,22 @@ EOF;
     exit(1);
 }
 
-if (class_exists(Logger::class) === false) {
-    if (file_exists(__DIR__.'/../vendor/autoload.php')) {  // cloned / dev environment?
-        require_once(__DIR__.'/../vendor/autoload.php');
-    } else {
-        require_once(realpath(__DIR__.'/../../../').'/autoload.php');
+if (class_exists(Generator::class) === false) {
+    // Порядок поиска автолоадера, устойчивый к способу установки
+    // (обычный require, path-repository с symlink, глобальная установка):
+    //   1) путь, который Composer прокидывает в bin-прокси;
+    //   2) собственный vendor пакета (cloned / dev);
+    //   3) vendor проекта, когда пакет лежит в vendor/webpractik/bitrixoa.
+    $autoloadCandidates = array_filter([
+        $GLOBALS['_composer_autoload_path'] ?? null,
+        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../../autoload.php',
+    ]);
+    foreach ($autoloadCandidates as $autoload) {
+        if (is_file($autoload)) {
+            require_once $autoload;
+            break;
+        }
     }
 }
 $errorTypes = [
@@ -150,7 +166,6 @@ $errorTypes = [
     E_WARNING => 'Warning',
     E_PARSE => 'Parser error',
     E_NOTICE => 'Notice',
-    E_STRICT => 'Strict',
     E_DEPRECATED => 'Deprecated',
     E_CORE_ERROR => 'Error(Core)',
     E_CORE_WARNING => 'Warning(Core)',
@@ -173,7 +188,9 @@ set_error_handler(function ($errno, $errstr, $file, $line) use ($errorTypes, $op
         error_log(' in '.$file.' on line '.$line);
     }
     if (substr($type, 0, 5) === 'Error') {
-        exit($errno);
+        // Не используем $errno как код выхода: коды PHP-ошибок (например
+        // E_USER_ERROR=256) по модулю 256 схлопываются в 0 = ложный успех.
+        exit(1);
     }
 });
 set_exception_handler(function ($exception) use ($options) {
@@ -188,35 +205,59 @@ set_exception_handler(function ($exception) use ($options) {
     exit($exception->getCode() ?: 1);
 });
 $exit = 0;
-Logger::getInstance()->log = function ($entry, $type) use ($options, &$exit) {
-    $exit = 1;
-    if ($type === E_USER_NOTICE) {
-        $type = '';
-        $color = COLOR_YELLOW;
-    } else {
-        $type = 'Warning: ';
-        $color = COLOR_RED;
+// swagger-php >=4 работает с PSR-3 логгером (OpenApi\Logger из 3.x удалён).
+// Логгер повторяет прежнее цветное поведение и помечает наличие проблем,
+// чтобы по завершении сканирования вернуть ненулевой код выхода.
+$logger = new class ($options['debug']) extends AbstractLogger {
+    public bool $hadError = false;
+
+    public function __construct(private bool $debug)
+    {
     }
-    if ($entry instanceof Exception) {
-        error_log(COLOR_RED."Error: " . $entry->getMessage().COLOR_STOP);
-        if ($options['debug']) {
-            error_log('Stack trace:'.PHP_EOL.$entry->getTraceAsString());
+
+    public function log($level, $message, array $context = []): void
+    {
+        // debug/info — служебный прогресс swagger-php ("Analysing source: ..."),
+        // не считаем его ошибкой и показываем только в debug-режиме.
+        if (in_array($level, [LogLevel::DEBUG, LogLevel::INFO], true)) {
+            if ($this->debug) {
+                error_log($message);
+            }
+
+            return;
         }
-    } else {
-        error_log($color. $type . $entry.COLOR_STOP);
-        if ($options['debug']) {
+
+        $this->hadError = true;
+
+        $isNotice = $level === LogLevel::NOTICE;
+        $prefix   = $isNotice ? '' : 'Warning: ';
+        $color    = $isNotice ? COLOR_YELLOW : COLOR_RED;
+
+        $exception = $context['exception'] ?? null;
+        if ($exception instanceof Throwable) {
+            error_log(COLOR_RED . 'Error: ' . $exception->getMessage() . COLOR_STOP);
+            if ($this->debug) {
+                error_log('Stack trace:' . PHP_EOL . $exception->getTraceAsString());
+            }
+
+            return;
+        }
+
+        error_log($color . $prefix . $message . COLOR_STOP);
+        if ($this->debug) {
             // Show backtrace in debug mode
-            $e = (string)(new Exception('trace'));
-            $trace = explode("\n", substr($e, strpos($e, 'Stack trace:')));
-            foreach ($trace as $i => $entry) {
+            $dump  = (string)(new Exception('trace'));
+            $trace = explode("\n", substr($dump, strpos($dump, 'Stack trace:')));
+            foreach ($trace as $i => $line) {
                 if ($i === 0) {
-                    error_log($entry);
+                    error_log($line);
                 }
                 if ($i <= 3) {
                     continue;
                 }
-                preg_match('/#([0-9]+) (.*)$/', $entry, $match);
-                error_log('#' .($match[1] - 2).' '.$match[2]);
+                if (preg_match('/#([0-9]+) (.*)$/', $line, $match)) {
+                    error_log('#' . ($match[1] - 2) . ' ' . $match[2]);
+                }
             }
         }
     }
@@ -226,7 +267,7 @@ if ($options['exclude']) {
     $exclude = $options['exclude'];
     if (strpos($exclude[0], ',') !== false) {
         $exploded = explode(',', $exclude[0]);
-        error_log(COLOR_RED.'Comma-separated exclude paths are deprecated, use multiple --exclude statements: --exclude '.$exploded[0].' --exclude '.$exploded[1]).COLOR_STOP;
+        error_log(COLOR_RED.'Comma-separated exclude paths are deprecated, use multiple --exclude statements: --exclude '.$exploded[0].' --exclude '.$exploded[1].COLOR_STOP);
         $exclude[0] = array_shift($exploded);
         $exclude = array_merge($exclude, $exploded);
     }
@@ -237,6 +278,32 @@ if ($options['pattern']) {
     $pattern = $options['pattern'];
 }
 
+// swagger-php >=5 удалил TokenAnalyser — остался только ReflectionAnalyser (по
+// умолчанию). Он разбирает и PHP-атрибуты (#[OA\...]), и docblock-аннотации
+// (@OA\..., если установлен doctrine/annotations), но для этого классы должны
+// быть автозагружаемы. Контроллеры Bitrix наследуют классы ядра, поэтому запуск
+// должен выполняться при поднятом ядре — через --bootstrap, указывающий на скрипт
+// инициализации Bitrix (см. README), либо из окружения с уже загруженным ядром.
+// Процедурные файлы без классов рефлексия не исполняет (TokenScanner заранее
+// находит имена классов и пропускает файлы без них).
+//
+// scanSources переопределён так, чтобы сбой разбора одного файла (например,
+// класса, чей родитель недоступен) не прерывал генерацию по всему дереву: файл
+// пропускается с предупреждением, остальные обрабатываются штатно.
+$generator = new class ($logger) extends Generator {
+    protected function scanSources(iterable $sources, Analysis $analysis, Context $rootContext): void
+    {
+        foreach ($sources as $source) {
+            try {
+                parent::scanSources([$source], $analysis, $rootContext);
+            } catch (Throwable $e) {
+                $name = $source instanceof SplFileInfo ? $source->getPathname() : (string)$source;
+                error_log(\OpenApi\COLOR_YELLOW.'Skipping '.$name.': '.$e->getMessage().\OpenApi\COLOR_STOP);
+            }
+        }
+    }
+};
+
 foreach ($options["processor"] as $processor) {
     $class = '\OpenApi\Processors\\'.$processor;
     if (class_exists($class)) {
@@ -244,11 +311,20 @@ foreach ($options["processor"] as $processor) {
     } elseif (class_exists($processor)) {
         $processor = new $processor();
     }
-    Analysis::registerProcessor($processor);
+    $generator->getProcessorPipeline()->add($processor);
 }
 
-$openapi = OpenApi\scan($paths, ['exclude' => $exclude, 'pattern' => $pattern]);
+$openapi = $generator->generate(new SourceFinder($paths, $exclude, $pattern));
 
+// swagger-php >=5 возвращает null, если в путях не нашлось ни одной аннотации/атрибута.
+if ($openapi === null) {
+    error_log(COLOR_RED.'Не найдено ни одной аннотации/атрибута в указанных путях.'.COLOR_STOP);
+    exit(1);
+}
+
+if ($logger->hadError) {
+    $exit = 1;
+}
 if ($exit !== 0) {
     error_log('');
 }
